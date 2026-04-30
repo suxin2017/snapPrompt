@@ -84,6 +84,14 @@ function buildDatasetUrl(relativePath: string) {
   return `${import.meta.env.BASE_URL}datasets/${encodePath(relativePath)}`
 }
 
+function withOfflineHint(message: string) {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return `${message}（当前离线，且本地缓存中没有该资源）`
+  }
+
+  return message
+}
+
 function touchCacheEntry(cache: Map<string, PromptAssetItem[]>, key: string, value: PromptAssetItem[]) {
   cache.delete(key)
   cache.set(key, value)
@@ -110,9 +118,16 @@ export async function fetchDatasetIndex() {
     return manifestCache
   }
 
-  const response = await fetch(manifestUrl)
+  let response: Response
+
+  try {
+    response = await fetch(manifestUrl)
+  } catch {
+    throw new Error(withOfflineHint('无法加载 datasets manifest，请先运行 pnpm run datasets:prepare'))
+  }
+
   if (!response.ok) {
-    throw new Error('无法加载 datasets manifest，请先运行 pnpm run datasets:prepare')
+    throw new Error(withOfflineHint('无法加载 datasets manifest，请先运行 pnpm run datasets:prepare'))
   }
 
   const payload = (await response.json()) as DatasetManifestPayload
@@ -191,9 +206,16 @@ export async function loadPromptAssets(dataset: DatasetManifestItem) {
   }
 
   const loaderPromise = (async () => {
-    const response = await fetch(buildDatasetUrl(dataset.dataPath))
+    let response: Response
+
+    try {
+      response = await fetch(buildDatasetUrl(dataset.dataPath))
+    } catch {
+      throw new Error(withOfflineHint(`加载数据失败: ${dataset.name}`))
+    }
+
     if (!response.ok) {
-      throw new Error(`加载数据失败: ${dataset.name}`)
+      throw new Error(withOfflineHint(`加载数据失败: ${dataset.name}`))
     }
 
     const payload = (await response.json()) as DatasetPayload
@@ -234,9 +256,16 @@ export async function loadCategoryAssets(category: CategoryManifestItem) {
   }
 
   const loaderPromise = (async () => {
-    const response = await fetch(buildDatasetUrl(category.dataPath))
+    let response: Response
+
+    try {
+      response = await fetch(buildDatasetUrl(category.dataPath))
+    } catch {
+      throw new Error(withOfflineHint(`加载分类数据失败: ${category.topCategory}`))
+    }
+
     if (!response.ok) {
-      throw new Error(`加载分类数据失败: ${category.topCategory}`)
+      throw new Error(withOfflineHint(`加载分类数据失败: ${category.topCategory}`))
     }
 
     const payload = (await response.json()) as CategoryPayload
