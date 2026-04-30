@@ -4,6 +4,10 @@ import { useI18n } from '@/contexts/i18nContext'
 import { Button } from '@/components/ui/button'
 import type { PromptAssetItem } from '@/lib/promptDatasets'
 
+function preventImageDefault(e: React.SyntheticEvent) {
+  e.preventDefault()
+}
+
 interface AssetDetailModalProps {
   asset: PromptAssetItem | null
   onClose: () => void
@@ -33,7 +37,15 @@ export function AssetDetailModal({ asset, onClose }: AssetDetailModalProps) {
 
         {/* 图片全屏预览 */}
         <div className="mt-4">
-          <img src={asset.imageUrl} alt={asset.title_cn} className="w-full rounded-2xl object-contain" />
+          <img
+            src={asset.imageUrl}
+            alt={asset.title_cn}
+            draggable={false}
+            onContextMenu={preventImageDefault}
+            onDragStart={preventImageDefault}
+            className="w-full rounded-2xl object-contain select-none"
+            style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+          />
         </div>
 
         {/* 标题和描述 */}

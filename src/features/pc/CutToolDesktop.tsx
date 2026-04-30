@@ -269,6 +269,7 @@ export function CutToolDesktop() {
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 })
   const [exporting, setExporting] = useState(false)
   const [previewSlice, setPreviewSlice] = useState<SliceRect | null>(null)
+  const [excludedSliceIndices, setExcludedSliceIndices] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     if (!previewSlice) return
@@ -381,6 +382,12 @@ export function CutToolDesktop() {
 
   const hasBlockingError = Boolean(parsedResult.error)
   const validSlices = slices.filter((item) => item.valid)
+  const exportableSlices = validSlices.filter((item) => !excludedSliceIndices.has(item.index))
+
+  useEffect(() => {
+    // Reset exclusion state whenever the slice list is recalculated.
+    setExcludedSliceIndices(new Set())
+  }, [slices])
 
   const handleImageUpload = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -433,8 +440,32 @@ export function CutToolDesktop() {
     setManualOverrides({})
   }
 
+  const toggleSliceExcluded = (index: number) => {
+    setExcludedSliceIndices((current) => {
+      const next = new Set(current)
+      if (next.has(index)) {
+        next.delete(index)
+      } else {
+        next.add(index)
+      }
+      return next
+    })
+  }
+
+  const invertExcludedForValidSlices = () => {
+    setExcludedSliceIndices((current) => {
+      const next = new Set<number>()
+      for (const item of validSlices) {
+        if (!current.has(item.index)) {
+          next.add(item.index)
+        }
+      }
+      return next
+    })
+  }
+
   const handleExportZip = async () => {
-    if (!imageUrl || validSlices.length === 0 || exporting) {
+    if (!imageUrl || exportableSlices.length === 0 || exporting) {
       return
     }
 
@@ -448,7 +479,7 @@ export function CutToolDesktop() {
       const zip = new JSZip()
       const metaList: { uuid: string; filename: string; title_cn: string; prompt_en: string }[] = []
 
-      for (const item of validSlices) {
+      for (const [queueIndex, item] of exportableSlices.entries()) {
         const canvas = document.createElement('canvas')
         canvas.width = item.width
         canvas.height = item.height
@@ -467,7 +498,7 @@ export function CutToolDesktop() {
         }
 
         const uuid = crypto.randomUUID()
-        const filename = `${String(item.index + 1).padStart(2, '0')}-${sanitizeFilename(item.title)}.png`
+        const filename = `${String(queueIndex + 1).padStart(2, '0')}-${sanitizeFilename(item.title)}.png`
         zip.file(filename, blob)
         metaList.push({ uuid, filename, title_cn: item.title, prompt_en: item.prompt })
       }
@@ -584,9 +615,18 @@ export function CutToolDesktop() {
           <div className="rounded-2xl border border-(--border) bg-(--card)/95 p-5">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold">预览与叠层</p>
-              <Button onClick={handleExportZip} disabled={!imageUrl || validSlices.length === 0 || hasBlockingError || exporting}>
-                {exporting ? '导出中...' : `导出 ZIP (${validSlices.length})`}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={invertExcludedForValidSlices}
+                  disabled={validSlices.length === 0 || hasBlockingError || exporting}
+                >
+                  反选
+                </Button>
+                <Button onClick={handleExportZip} disabled={!imageUrl || exportableSlices.length === 0 || hasBlockingError || exporting}>
+                  {exporting ? '导出中...' : `导出 ZIP (${exportableSlices.length})`}
+                </Button>
+              </div>
             </div>
 
             {!imageUrl ? (
@@ -661,6 +701,23 @@ export function CutToolDesktop() {
                   <span className="truncate font-medium">#{item.index + 1} {item.title}</span>
                   <span className="ml-1 shrink-0">{item.valid ? `${item.width}×${item.height}` : '无效'}</span>
                 </div>
+                <label
+                  className={`flex items-center gap-2 rounded-md px-2 py-1 text-xs ${
+                    item.valid ? 'bg-(--muted)/40 text-(--foreground)' : 'bg-red-50 text-red-700'
+                  }`}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <input
+                    type="checkbox"
+                    checked={item.valid ? excludedSliceIndices.has(item.index) : true}
+                    disabled={!item.valid || exporting}
+                    onChange={() => {
+                      if (!item.valid) return
+                      toggleSliceExcluded(item.index)
+                    }}
+                  />
+                  不导出
+                </label>
                 {imageUrl && item.valid ? (
                   <div className="overflow-hidden rounded-md border border-(--border) bg-(--muted)/30">
                     <SliceThumbnail imageUrl={imageUrl} slice={item} />

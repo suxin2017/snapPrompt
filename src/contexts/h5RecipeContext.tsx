@@ -10,7 +10,7 @@ type H5RecipeContextValue = {
   setSubject: (value: string) => void
   recipeItems: RecipeItem[]
   addRecipeItem: (asset: PromptAssetItem) => void
-  removeRecipeItem: (key: string) => void
+  removeRecipeItem: (keyOrUuid: string) => void
 }
 
 const H5RecipeContext = createContext<H5RecipeContextValue | null>(null)
@@ -23,8 +23,8 @@ export function H5RecipeProvider({ children }: { children: ReactNode }) {
     setRecipeItems((prev) => [...prev, { ...asset, key: `${asset.uuid}-${Date.now()}-${prev.length}` }])
   }
 
-  function removeRecipeItem(key: string) {
-    setRecipeItems((prev) => prev.filter((item) => item.key !== key))
+  function removeRecipeItem(keyOrUuid: string) {
+    setRecipeItems((prev) => prev.filter((item) => item.key !== keyOrUuid && item.uuid !== keyOrUuid))
   }
 
   return (

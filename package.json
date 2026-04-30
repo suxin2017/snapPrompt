@@ -17,8 +17,10 @@
     "datasets:clean": "rm -rf public/datasets"
   },
   "dependencies": {
+    "@tanstack/react-virtual": "^3.13.24",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "framer-motion": "^12.38.0",
     "jszip": "^3.10.1",
     "lucide-react": "^0.553.0",
     "react": "^19.2.5",

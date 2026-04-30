@@ -166,6 +166,29 @@ export function getSubCategories(items: DatasetManifestItem[], topCategory: stri
   return [...subSet]
 }
 
+export type FlatCategory = {
+  top: string
+  sub: string | null
+  label: string // e.g. "下身 / 半裙" or "上衣"
+}
+
+export function getFlatCategories(items: DatasetManifestItem[]): FlatCategory[] {
+  const seen = new Set<string>()
+  const result: FlatCategory[] = []
+
+  for (const item of items) {
+    const category = normalizeSlashes(item.category)
+    const [top, ...rest] = category.split('/')
+    const sub = rest.length > 0 ? rest.join('/') : null
+    const key = `${top}|||${sub ?? ''}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    result.push({ top, sub, label: sub ? `${top} / ${sub}` : top })
+  }
+
+  return result
+}
+
 export function filterDatasetsByCategory(items: DatasetManifestItem[], topCategory: string, subCategory: string | null) {
   return items.filter((item) => {
     const category = normalizeSlashes(item.category)

@@ -1,5 +1,3 @@
-export type Language = 'zh' | 'en'
-
 export const translations = {
   zh: {
     // Header
@@ -43,48 +41,5 @@ export const translations = {
 
     // No Data
     noData: '当前分类暂无素材',
-  },
-  en: {
-    // Header
-    snapPrompt: 'snapPrompt',
-    promptCraft: 'PromptCraft',
-
-    // Category Selection
-    selectBlocks: 'Select Blocks',
-    categories: 'categories',
-    subCategories: 'Sub-categories',
-    allCategories: 'All',
-    dataSets: 'Data Sets',
-
-    // Search
-    searchPlaceholder: 'Search by title or prompt...',
-
-    // Bottom Bar
-    currentRecipe: 'Current Recipe',
-    view: 'View',
-    generate: 'Generate',
-    selectBlocksBtn: 'Select',
-
-    // Recipe Sheet
-    recipe: 'Current Recipe',
-    noRecipe: 'No blocks added yet, go select some!',
-    delete: 'Delete',
-    generatePrompt: 'Generate Prompt',
-
-    // Prompt Sheet
-    promptOutput: 'Prompt Output',
-    copyPrompt: 'Copy Prompt',
-    copied: 'Copied ✓',
-
-    // Asset Detail Modal
-    close: 'Close',
-    addToRecipe: 'Add to Recipe',
-    prompt: 'Prompt',
-
-    // Add Button
-    add: 'Add',
-
-    // No Data
-    noData: 'No data in this category',
   },
 }
