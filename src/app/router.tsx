@@ -8,7 +8,7 @@ import { FeaturesPage } from '@/pages/FeaturesPage'
 import { AboutPage } from '@/pages/AboutPage'
 import { CutToolPage } from '@/pages/CutToolPage'
 
-const isH5OnlyBuild = import.meta.env.VITE_BUILD_TARGET === 'h5'
+const isFullMode = import.meta.env.DEV || import.meta.env.VITE_BUILD_TARGET === 'full'
 
 const h5Routes = [
   {
@@ -27,9 +27,8 @@ const h5Routes = [
   },
 ]
 
-const pcRoutes = isH5OnlyBuild
-  ? [{ path: '/pc/*', element: <Navigate to="/m" replace /> }]
-  : [
+const pcRoutes = isFullMode
+  ? [
       {
         path: '/pc',
         element: <ShellLayout basePath="/pc" terminalLabel="PC" />,
@@ -41,11 +40,12 @@ const pcRoutes = isH5OnlyBuild
         ],
       },
     ]
+  : [{ path: '/pc/*', element: <Navigate to="/m" replace /> }]
 
 export const router = createHashRouter([
   {
     path: '/',
-    element: <Navigate to={isH5OnlyBuild ? '/m' : '/pc'} replace />,
+    element: <Navigate to={isFullMode ? '/pc' : '/m'} replace />,
   },
   ...h5Routes,
   ...pcRoutes,

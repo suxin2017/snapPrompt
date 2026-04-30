@@ -33,11 +33,20 @@ pnpm build
 pnpm preview
 ```
 
-线上构建（仅输出 H5 路由）：
+默认生产构建为 H5-only，仅输出 `/m` 路由。
+
+如需本地额外构建完整 PC + H5 包：
+
+```bash
+pnpm run build:full
+pnpm run preview:full
+```
+
+显式执行 H5-only 构建：
 
 ```bash
 pnpm run build:h5
-pnpm run preview
+pnpm run preview:h5
 ```
 
 ## 目录说明
@@ -66,8 +75,9 @@ src/
 ## H5/PC 分割策略
 
 - 路由按构建目标装配：
-- `full`（默认）: 同时提供 `/pc` 与 `/m`，根路径跳转 `/pc`
-- `h5`（部署）: 仅提供 `/m`，根路径跳转 `/m`
+- 开发环境: 自动提供 `/pc` 与 `/m`，根路径跳转 `/pc`
+- 生产构建默认: 仅提供 `/m`，根路径跳转 `/m`
+- 如需显式保留 PC 构建，使用 `VITE_BUILD_TARGET=full` 或 `pnpm run build:full`
 - 页面层只做组装，具体实现分别放到 `features/h5` 与 `features/pc`
 - 公共结构放在 `features/shared`
 
@@ -75,7 +85,7 @@ src/
 
 - Vite `base` 已配置为 `/snapPrompt/`
 - 已提供 GitHub Actions 工作流：`.github/workflows/deploy.yml`
-- 工作流构建命令固定为 `pnpm run build:h5`，部署产物仅包含 H5 路由
+- 工作流构建命令使用默认 `pnpm build`，而默认生产构建即为 H5-only
 - 在仓库设置中启用 Pages，Source 选择 `GitHub Actions`
 
 部署触发条件：推送到 `main` 分支。
