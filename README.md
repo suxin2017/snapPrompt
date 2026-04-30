@@ -18,11 +18,26 @@ pnpm install
 pnpm dev
 ```
 
+默认开发模式为 `full`，可同时访问 `#/pc` 与 `#/m`。
+
+如需本地模拟线上 H5-only 行为：
+
+```bash
+pnpm run dev:h5
+```
+
 ## 构建与预览
 
 ```bash
 pnpm build
 pnpm preview
+```
+
+线上构建（仅输出 H5 路由）：
+
+```bash
+pnpm run build:h5
+pnpm run preview
 ```
 
 ## 目录说明
@@ -50,7 +65,9 @@ src/
 
 ## H5/PC 分割策略
 
-- 同一路由，按设备切换渲染（URL 不变）
+- 路由按构建目标装配：
+- `full`（默认）: 同时提供 `/pc` 与 `/m`，根路径跳转 `/pc`
+- `h5`（部署）: 仅提供 `/m`，根路径跳转 `/m`
 - 页面层只做组装，具体实现分别放到 `features/h5` 与 `features/pc`
 - 公共结构放在 `features/shared`
 
@@ -58,6 +75,7 @@ src/
 
 - Vite `base` 已配置为 `/snapPrompt/`
 - 已提供 GitHub Actions 工作流：`.github/workflows/deploy.yml`
+- 工作流构建命令固定为 `pnpm run build:h5`，部署产物仅包含 H5 路由
 - 在仓库设置中启用 Pages，Source 选择 `GitHub Actions`
 
 部署触发条件：推送到 `main` 分支。

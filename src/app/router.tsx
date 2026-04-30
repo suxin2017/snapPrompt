@@ -8,11 +8,9 @@ import { FeaturesPage } from '@/pages/FeaturesPage'
 import { AboutPage } from '@/pages/AboutPage'
 import { CutToolPage } from '@/pages/CutToolPage'
 
-export const router = createHashRouter([
-  {
-    path: '/',
-    element: <Navigate to="/pc" replace />,
-  },
+const isH5OnlyBuild = import.meta.env.VITE_BUILD_TARGET === 'h5'
+
+const h5Routes = [
   {
     path: '/m',
     element: (
@@ -27,14 +25,28 @@ export const router = createHashRouter([
       { path: 'cut-tool', element: <CutToolPage terminal="h5" /> },
     ],
   },
+]
+
+const pcRoutes = isH5OnlyBuild
+  ? [{ path: '/pc/*', element: <Navigate to="/m" replace /> }]
+  : [
+      {
+        path: '/pc',
+        element: <ShellLayout basePath="/pc" terminalLabel="PC" />,
+        children: [
+          { index: true, element: <HomePage terminal="pc" /> },
+          { path: 'features', element: <FeaturesPage terminal="pc" /> },
+          { path: 'about', element: <AboutPage terminal="pc" /> },
+          { path: 'cut-tool', element: <CutToolPage terminal="pc" /> },
+        ],
+      },
+    ]
+
+export const router = createHashRouter([
   {
-    path: '/pc',
-    element: <ShellLayout basePath="/pc" terminalLabel="PC" />,
-    children: [
-      { index: true, element: <HomePage terminal="pc" /> },
-      { path: 'features', element: <FeaturesPage terminal="pc" /> },
-      { path: 'about', element: <AboutPage terminal="pc" /> },
-      { path: 'cut-tool', element: <CutToolPage terminal="pc" /> },
-    ],
+    path: '/',
+    element: <Navigate to={isH5OnlyBuild ? '/m' : '/pc'} replace />,
   },
+  ...h5Routes,
+  ...pcRoutes,
 ])
