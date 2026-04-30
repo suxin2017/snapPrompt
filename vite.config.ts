@@ -5,7 +5,7 @@ import path from 'node:path'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/',
+  base: '/snapPrompt/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
