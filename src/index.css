@@ -1,0 +1,35 @@
+@import 'tailwindcss';
+
+:root {
+  --background: #f4efe7;
+  --foreground: #1d140f;
+  --card: #fffaf4;
+  --card-foreground: #1d140f;
+  --primary: #005f73;
+  --primary-foreground: #f6fffe;
+  --secondary: #e9d8a6;
+  --secondary-foreground: #3a2a0c;
+  --muted: #efe2cc;
+  --muted-foreground: #6a5445;
+  --border: #d8c6b5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--foreground);
+  font-family: 'Space Grotesk', 'Avenir Next', 'Segoe UI', sans-serif;
+  background:
+    radial-gradient(circle at 5% 10%, #fef5df 0, transparent 28%),
+    radial-gradient(circle at 95% 0, #e8f6f8 0, transparent 30%),
+    linear-gradient(135deg, #f7f0e6 0%, #f3e8da 60%, #efe3d2 100%);
+}
