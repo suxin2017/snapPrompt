@@ -1,3 +1,4 @@
+import { CutToolMobile } from '@/features/h5/CutToolMobile'
 import { CutToolDesktop } from '@/features/pc/CutToolDesktop'
 
 type CutToolPageProps = {
@@ -5,5 +6,5 @@ type CutToolPageProps = {
 }
 
 export function CutToolPage({ terminal }: CutToolPageProps) {
-  return terminal === 'pc' ? <CutToolDesktop /> : null
+  return terminal === 'pc' ? <CutToolDesktop /> : <CutToolMobile />
 }

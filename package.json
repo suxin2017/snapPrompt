@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "datasets:prepare": "node scripts/prepare-datasets.mjs",
+    "datasets:clean": "rm -rf public/datasets"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

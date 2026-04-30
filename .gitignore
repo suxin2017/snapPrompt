@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Generated datasets (from scripts/prepare-datasets.mjs)
+public/datasets/**
+!public/datasets/.gitignore
