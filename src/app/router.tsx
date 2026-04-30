@@ -1,6 +1,7 @@
 import { Navigate, createHashRouter } from 'react-router-dom'
 
 import { H5RecipeProvider } from '@/contexts/h5RecipeContext'
+import { I18nProvider } from '@/contexts/i18nContext'
 import { ShellLayout } from '@/features/shared/ShellLayout'
 import { HomePage } from '@/pages/HomePage'
 import { FeaturesPage } from '@/pages/FeaturesPage'
@@ -15,14 +16,14 @@ export const router = createHashRouter([
   {
     path: '/m',
     element: (
-      <H5RecipeProvider>
-        <ShellLayout basePath="/m" terminalLabel="H5" />
-      </H5RecipeProvider>
+      <I18nProvider>
+        <H5RecipeProvider>
+          <ShellLayout basePath="/m" terminalLabel="H5" />
+        </H5RecipeProvider>
+      </I18nProvider>
     ),
     children: [
-      { index: true, element: <HomePage terminal="h5" /> },
-      { path: 'features', element: <FeaturesPage terminal="h5" /> },
-      { path: 'about', element: <AboutPage terminal="h5" /> },
+      { index: true, element: <Navigate to="cut-tool" replace /> },
       { path: 'cut-tool', element: <CutToolPage terminal="h5" /> },
     ],
   },

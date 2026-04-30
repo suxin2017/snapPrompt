@@ -4,31 +4,36 @@ import { Copy, Layers, Sparkles, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { useH5Recipe } from '@/contexts/h5RecipeContext'
+import { useI18n } from '@/contexts/i18nContext'
 
-function buildPrompt(subject: string, items: { prompt_en: string }[]) {
+function buildPrompt(subject: string, items: { prompt_en: string; title_cn: string }[], language: string) {
   const parts: string[] = []
   if (subject.trim()) {
     parts.push(subject.trim())
   }
 
   for (const item of items) {
-    parts.push(item.prompt_en)
+    parts.push(language === 'zh' ? item.title_cn : item.prompt_en)
   }
 
-  return parts.join(', ')
+  return parts.join(language === 'zh' ? '、' : ', ')
 }
 
 export function H5BottomBar() {
   const { subject, recipeItems, removeRecipeItem } = useH5Recipe()
   const navigate = useNavigate()
+  const { t, language } = useI18n()
 
   const [showRecipeSheet, setShowRecipeSheet] = useState(false)
   const [showPromptSheet, setShowPromptSheet] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  const promptOutput = useMemo(() => buildPrompt(subject, recipeItems), [subject, recipeItems])
+  const promptOutput = useMemo(() => buildPrompt(subject, recipeItems, language), [subject, recipeItems, language])
 
   const keywords = useMemo(() => {
+    if (language === 'zh') {
+      return recipeItems.map((item) => item.title_cn)
+    }
     const set = new Set<string>()
     for (const item of recipeItems) {
       for (const word of item.prompt_en.split(',')) {
@@ -40,7 +45,7 @@ export function H5BottomBar() {
     }
 
     return [...set]
-  }, [recipeItems])
+  }, [recipeItems, language])
 
   const previewTags = recipeItems
     .slice(0, 3)
@@ -72,7 +77,7 @@ export function H5BottomBar() {
 
   return (
     <>
-      <div className="fixed inset-x-0 bottom-14 z-20 mx-auto w-full max-w-6xl px-4 pb-2">
+      <div className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-6xl px-4 pb-2">
         <div className="rounded-2xl border border-(--border) bg-(--card)/95 p-3 shadow-lg backdrop-blur">
           <div className="flex items-center gap-3">
             <button
@@ -82,18 +87,18 @@ export function H5BottomBar() {
             >
               <Layers size={16} className="shrink-0 text-[var(--primary)]" />
               <div className="min-w-0">
-                <span className="text-sm font-medium">当前配方 {recipeItems.length} 个</span>
+                <span className="text-sm font-medium">{t('currentRecipe')} {recipeItems.length} {t('categories')}</span>
                 {previewTags ? (
                   <p className="truncate text-xs text-(--muted-foreground)">{previewTags}</p>
                 ) : null}
               </div>
             </button>
-            <Button size="sm" variant="secondary" onClick={() => setShowRecipeSheet(true)}>
-              查看
+            <Button size="sm" variant="secondary" onClick={() => setShowRecipeSheet(true)} disabled={!recipeItems.length}>
+              {t('view')}
             </Button>
             <Button size="sm" onClick={handleGenerateClick} className="gap-1.5">
               <Sparkles size={14} />
-              {recipeItems.length ? '生成' : '选积木'}
+              {recipeItems.length ? t('generate') : t('selectBlocksBtn')}
             </Button>
           </div>
         </div>
@@ -106,7 +111,7 @@ export function H5BottomBar() {
             onClick={(event) => event.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">当前配方</h3>
+              <h3 className="text-lg font-semibold">{t('recipe')}</h3>
               <button type="button" onClick={() => setShowRecipeSheet(false)}>
                 <X size={18} />
               </button>
@@ -114,7 +119,7 @@ export function H5BottomBar() {
             <div className="overflow-y-auto">
               {recipeItems.length === 0 ? (
                 <p className="rounded-xl bg-(--background) p-3 text-sm text-(--muted-foreground)">
-                  还没有添加积木，去选择积木吧
+                  {t('noRecipe')}
                 </p>
               ) : (
                 <div className="space-y-2 pb-4">
@@ -130,7 +135,7 @@ export function H5BottomBar() {
                         onClick={() => removeRecipeItem(item.key)}
                         className="shrink-0 text-xs text-red-500"
                       >
-                        删除
+                        {t('delete')}
                       </button>
                     </div>
                   ))}
@@ -144,7 +149,7 @@ export function H5BottomBar() {
                     setShowPromptSheet(true)
                   }}
                 >
-                  <Sparkles size={16} /> 生成 Prompt
+                  <Sparkles size={16} /> {t('generatePrompt')}
                 </Button>
               ) : null}
             </div>
@@ -159,13 +164,13 @@ export function H5BottomBar() {
             onClick={(event) => event.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Prompt 输出</h3>
+              <h3 className="text-lg font-semibold">{t('promptOutput')}</h3>
               <button type="button" onClick={() => setShowPromptSheet(false)}>
                 <X size={18} />
               </button>
             </div>
             <div className="space-y-3 overflow-y-auto pb-4">
-              <div className="rounded-xl bg-(--background) p-3 text-sm leading-6">{promptOutput || '暂无内容'}</div>
+              <div className="rounded-xl bg-(--background) p-3 text-sm leading-6">{promptOutput || t('noData')}</div>
               <div className="flex flex-wrap gap-2">
                 {keywords.map((word) => (
                   <span key={word} className="rounded-full bg-(--muted) px-2 py-1 text-xs text-(--muted-foreground)">
@@ -174,7 +179,7 @@ export function H5BottomBar() {
                 ))}
               </div>
               <Button onClick={handleCopy} className="w-full gap-2">
-                <Copy size={16} /> {copied ? '已复制 ✓' : '复制 Prompt'}
+                <Copy size={16} /> {copied ? t('copied') : t('copyPrompt')}
               </Button>
             </div>
           </div>
