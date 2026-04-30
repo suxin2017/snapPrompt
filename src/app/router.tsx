@@ -6,6 +6,7 @@ import { ShellLayout } from '@/features/shared/ShellLayout'
 import { HomePage } from '@/pages/HomePage'
 import { FeaturesPage } from '@/pages/FeaturesPage'
 import { AboutPage } from '@/pages/AboutPage'
+import { BlocksPreviewPage } from '@/pages/BlocksPreviewPage'
 import { CutToolPage } from '@/pages/CutToolPage'
 
 const isFullMode = import.meta.env.DEV || import.meta.env.VITE_BUILD_TARGET === 'full'
@@ -36,6 +37,7 @@ const pcRoutes = isFullMode
           { index: true, element: <HomePage terminal="pc" /> },
           { path: 'features', element: <FeaturesPage terminal="pc" /> },
           { path: 'about', element: <AboutPage terminal="pc" /> },
+          { path: 'blocks-preview', element: <BlocksPreviewPage /> },
           { path: 'cut-tool', element: <CutToolPage terminal="pc" /> },
         ],
       },

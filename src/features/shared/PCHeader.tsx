@@ -10,10 +10,11 @@ const navItems = [
   { suffix: '', label: '首页' },
   { suffix: '/features', label: '功能页' },
   { suffix: '/about', label: '关于页' },
+  { suffix: '/blocks-preview', label: '积木预览' },
   { suffix: '/cut-tool', label: '剪切工具' },
 ]
 
-const icons = [LayoutGrid, NotebookText, Scissors]
+const icons = [LayoutGrid, NotebookText, LayoutGrid, Scissors]
 
 export function PCHeader({ terminalLabel, basePath }: PCHeaderProps) {
   const location = useLocation()
