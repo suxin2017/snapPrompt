@@ -26,3 +26,4 @@ dist-ssr
 # Generated datasets (from scripts/prepare-datasets.mjs)
 public/datasets/**
 !public/datasets/.gitignore
+dev-dist/
