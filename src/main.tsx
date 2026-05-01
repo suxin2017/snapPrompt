@@ -14,13 +14,6 @@ updateSW = registerSW({
   },
 })
 
-router.subscribe((state) => {
-  const path = state.location.pathname
-  if (path && path !== '/') {
-    try { localStorage.setItem('lastRoute', path) } catch {}
-  }
-})
-
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <RouterProvider router={router} />

@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 
 import { H5BottomBar } from '@/features/h5/H5BottomBar'
@@ -13,6 +14,12 @@ export function ShellLayout({ basePath }: ShellLayoutProps) {
   const { pathname } = useLocation()
 
   useThemeColor(pathname)
+
+  useEffect(() => {
+    if (pathname && pathname !== '/') {
+      try { localStorage.setItem('lastRoute', pathname) } catch { /* noop */ }
+    }
+  }, [pathname])
 
   return (
     <div className="mx-auto min-h-screen w-full max-w-6xl px-4 py-6 md:px-8 md:py-10">

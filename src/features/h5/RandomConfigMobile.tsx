@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Sparkles } from 'lucide-react'
+import { X } from 'lucide-react'
 
+import { useH5Recipe } from '@/contexts/h5RecipeContext'
 import { useI18n } from '@/contexts/i18nContext'
 import {
   fetchDatasetIndex,
@@ -12,6 +13,7 @@ import {
 
 export function RandomConfigMobile() {
   const { t } = useI18n()
+  const { setRandomPrompt, registerRandomConfigAction } = useH5Recipe()
 
   const [categories, setCategories] = useState<CategoryManifestItem[]>([])
   const [loadingIndex, setLoadingIndex] = useState(true)
@@ -48,17 +50,13 @@ export function RandomConfigMobile() {
     }
   }, [t])
 
+  useEffect(() => {
+    setRandomPrompt(results.map((item) => item.asset.prompt_en).join(', '))
+  }, [results, setRandomPrompt])
+
   const hasResult = results.length > 0
 
-  const sectionTitle = useMemo(() => {
-    if (loadingIndex) {
-      return t('randoming')
-    }
-
-    return t('randomResult')
-  }, [loadingIndex, t])
-
-  async function handleRandom() {
+  const handleRandom = useCallback(async () => {
     if (isGenerating || loadingIndex) {
       return
     }
@@ -80,54 +78,60 @@ export function RandomConfigMobile() {
     } finally {
       setIsGenerating(false)
     }
+  }, [categories, isGenerating, loadingIndex, t])
+
+  useEffect(() => {
+    registerRandomConfigAction(() => {
+      void handleRandom()
+    })
+
+    return () => {
+      registerRandomConfigAction(null)
+    }
+  }, [handleRandom, registerRandomConfigAction])
+
+  function removeResult(uuid: string) {
+    setResults((prev) => prev.filter((r) => r.asset.uuid !== uuid))
   }
 
   return (
-    <div className="relative space-y-6 pb-36">
-      <div className="relative pt-6">
-        <motion.div
-          animate={{ y: hasResult ? -20 : 0, scale: hasResult ? 0.72 : 1 }}
-          transition={{ duration: 0.38, ease: [0.32, 0, 0.2, 1] }}
-          className="flex w-full justify-center"
-        >
-          <motion.button
-            type="button"
-            onClick={handleRandom}
-            whileTap={{ scale: 0.97 }}
-            aria-label={t('startRandom')}
-            className="flex h-40 w-40 items-center justify-center rounded-full border border-(--border) bg-[radial-gradient(circle_at_30%_20%,#fff6e7_0%,#f1dfc8_36%,#e7cfb0_100%)] p-6 text-center text-lg font-semibold text-[#1d140f] shadow-[0_12px_32px_rgba(0,0,0,0.12)] disabled:cursor-not-allowed disabled:opacity-70"
-            disabled={isGenerating || loadingIndex}
+    <div className="relative space-y-4 pb-36">
+      <AnimatePresence mode="wait">
+        {hasResult ? (
+          <motion.section
+            key="results"
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+            className="space-y-3"
           >
-            <span className="inline-flex items-center gap-1">
-              <Sparkles size={18} />
-              {isGenerating || loadingIndex ? t('randoming') : hasResult ? t('rerandom') : t('startRandom')}
-            </span>
-          </motion.button>
-        </motion.div>
-
-        <AnimatePresence>
-          {hasResult ? (
-            <motion.section
-              initial={{ opacity: 0, y: 28 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              transition={{ duration: 0.25, ease: 'easeOut' }}
-              className="mt-2 space-y-3"
-            >
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold tracking-wide text-(--muted-foreground)">{sectionTitle}</h3>
-                <span className="text-xs text-(--muted-foreground)">{results.length}</span>
-              </div>
-              <div className="grid grid-cols-1 gap-3 min-[390px]:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 min-[390px]:grid-cols-2">
+              <AnimatePresence initial={false}>
                 {results.map(({ topCategory, asset }) => (
-                  <article
+                  <motion.article
                     key={`${topCategory}-${asset.uuid}`}
-                    className="overflow-hidden rounded-2xl border border-(--border) bg-(--background) p-2.5"
+                    layout
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 8, transition: { duration: 0.16 } }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                    className="overflow-hidden rounded-3xl border border-(--border) bg-(--card) p-3 shadow-sm"
                   >
-                    <div className="mb-2 inline-flex rounded-full bg-(--muted) px-2 py-1 text-[11px] font-medium text-(--muted-foreground)">
-                      {topCategory}
+                    <div className="mb-3 flex items-start justify-between gap-2">
+                      <div className="inline-flex rounded-full bg-(--muted) px-2.5 py-1 text-[11px] font-medium text-(--muted-foreground)">
+                        {topCategory}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeResult(asset.uuid)}
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-(--border) bg-(--card) text-(--muted-foreground) transition hover:text-red-500"
+                        aria-label="删除"
+                      >
+                        <X size={14} />
+                      </button>
                     </div>
-                    <div className="aspect-square overflow-hidden rounded-xl bg-(--card)">
+                    <div className="aspect-[4/5] overflow-hidden rounded-2xl bg-(--background)">
                       <img
                         src={asset.imageUrl}
                         alt={asset.title_cn}
@@ -135,20 +139,26 @@ export function RandomConfigMobile() {
                         className="h-full w-full object-contain"
                       />
                     </div>
-                    <p className="mt-2 line-clamp-1 text-sm font-medium">{asset.title_cn}</p>
-                  </article>
+                    <p className="mt-3 line-clamp-1 text-sm font-medium text-(--foreground)">{asset.title_cn}</p>
+                  </motion.article>
                 ))}
-              </div>
-            </motion.section>
-          ) : null}
-        </AnimatePresence>
-
-        {!hasResult && hasGenerated && !isGenerating && !loadingIndex ? (
-          <p className="mt-6 text-center text-sm text-(--muted-foreground)">{t('noRandomResult')}</p>
+              </AnimatePresence>
+            </div>
+          </motion.section>
         ) : null}
+      </AnimatePresence>
 
-        {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
-      </div>
+      {!hasResult && hasGenerated && !isGenerating && !loadingIndex ? (
+        <div className="rounded-2xl border border-(--border) bg-(--card) p-4 text-sm text-(--muted-foreground) shadow-sm">
+          {t('noRandomResult')}
+        </div>
+      ) : null}
+
+      {error ? (
+        <div className="rounded-2xl border border-[var(--color-red-200)] bg-[var(--color-red-50)] p-4 text-sm text-red-700 shadow-sm">
+          {error}
+        </div>
+      ) : null}
     </div>
   )
 }

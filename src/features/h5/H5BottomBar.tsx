@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Copy, Layers, Menu, Sparkles, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 
@@ -25,9 +25,12 @@ function buildPrompt(subject: string, items: { prompt_en: string; title_cn: stri
 }
 
 export function H5BottomBar() {
-  const { subject, recipeItems, removeRecipeItem } = useH5Recipe()
+  const { subject, recipeItems, removeRecipeItem, randomPrompt, requestRandomConfig } = useH5Recipe()
   const navigate = useNavigate()
+  const location = useLocation()
   const { t } = useI18n()
+
+  const isRandomPage = location.pathname === '/m/random-config'
 
   const [showRecipeSheet, setShowRecipeSheet] = useState(false)
   const [showPromptSheet, setShowPromptSheet] = useState(false)
@@ -68,6 +71,20 @@ export function H5BottomBar() {
     }
   }
 
+  async function handleRandomCopy() {
+    if (!randomPrompt) {
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(randomPrompt)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1800)
+    } catch {
+      /* clipboard may be unavailable in some browsers */
+    }
+  }
+
   function handleGenerateClick() {
     if (!recipeItems.length) {
       void navigate('/m/cut-tool')
@@ -90,38 +107,57 @@ export function H5BottomBar() {
             <Button size="sm" variant="secondary" onClick={() => setShowNavSheet(true)} className="px-2" aria-label={t('openMenu')}>
               <Menu size={14} />
             </Button>
-            <button
-              type="button"
-              onClick={() => setShowRecipeSheet(true)}
-              className="flex min-w-0 flex-1 items-center gap-2 text-left"
-            >
-              <Layers size={16} className="shrink-0 text-(--primary)" />
-              <div className="min-w-0">
-                <span className="text-sm font-medium">
-                  {t('currentRecipe')}{' '}
-                  <AnimatePresence mode="wait" initial={false}>
-                    <motion.span
-                      key={recipeItems.length}
-                      initial={{ opacity: 0, y: 6, scale: 0.9 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -6, scale: 0.9 }}
-                      transition={{ duration: 0.18, ease: 'easeOut' }}
-                      className="inline-block"
-                    >
-                      {recipeItems.length}
-                    </motion.span>
-                  </AnimatePresence>{' '}
-                  {t('categories')}
-                </span>
-              </div>
-            </button>
-            <Button size="sm" variant="secondary" onClick={() => setShowRecipeSheet(true)} disabled={!recipeItems.length}>
-              {t('view')}
-            </Button>
-            <Button size="sm" onClick={handleGenerateClick} className="gap-1.5">
-              <Sparkles size={14} />
-              {recipeItems.length ? t('generate') : t('selectBlocksBtn')}
-            </Button>
+            {isRandomPage ? (
+              <>
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <Sparkles size={16} className="shrink-0 text-(--primary)" />
+                  <span className="truncate text-sm font-medium text-(--muted-foreground)">{t('randomConfig')}</span>
+                </div>
+                <Button size="sm" variant="secondary" onClick={requestRandomConfig} className="gap-1.5 shrink-0">
+                  <Sparkles size={14} />
+                  {randomPrompt ? t('rerandom') : t('startRandom')}
+                </Button>
+                <Button size="sm" onClick={handleRandomCopy} disabled={!randomPrompt} className="gap-1.5 shrink-0">
+                  <Copy size={14} />
+                  {copied ? t('copied') : t('copyPrompt')}
+                </Button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowRecipeSheet(true)}
+                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                >
+                  <Layers size={16} className="shrink-0 text-(--primary)" />
+                  <div className="min-w-0">
+                    <span className="text-sm font-medium">
+                      {t('currentRecipe')}{' '}
+                      <AnimatePresence mode="wait" initial={false}>
+                        <motion.span
+                          key={recipeItems.length}
+                          initial={{ opacity: 0, y: 6, scale: 0.9 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -6, scale: 0.9 }}
+                          transition={{ duration: 0.18, ease: 'easeOut' }}
+                          className="inline-block"
+                        >
+                          {recipeItems.length}
+                        </motion.span>
+                      </AnimatePresence>{' '}
+                      {t('categories')}
+                    </span>
+                  </div>
+                </button>
+                <Button size="sm" variant="secondary" onClick={() => setShowRecipeSheet(true)} disabled={!recipeItems.length}>
+                  {t('view')}
+                </Button>
+                <Button size="sm" onClick={handleGenerateClick} className="gap-1.5">
+                  <Sparkles size={14} />
+                  {recipeItems.length ? t('generate') : t('selectBlocksBtn')}
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>

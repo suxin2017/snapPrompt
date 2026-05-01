@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 const DEFAULT_THEME_COLOR = '#f4efe7'
 
 const routeThemeColors: Record<string, string> = {
+  '/m/random-config': '#fbf5e8',
   '/m/cut-tool': '#f4efe7',
   '/pc': '#f4efe7',
   '/pc/cut-tool': '#f4efe7',

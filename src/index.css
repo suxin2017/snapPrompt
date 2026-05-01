@@ -2,6 +2,7 @@
 
 :root {
   --background: #f4efe7;
+  --page-surface: #fbf5e8;
   --foreground: #1d140f;
   --card: #fffaf4;
   --card-foreground: #1d140f;
@@ -39,10 +40,12 @@ body {
   padding-right: var(--safe-area-right);
   color: var(--foreground);
   font-family: 'Space Grotesk', 'Avenir Next', 'Segoe UI', sans-serif;
+  background-color: var(--page-surface);
   background:
-    radial-gradient(circle at 5% 10%, #fef5df 0, transparent 28%),
-    radial-gradient(circle at 95% 0, #e8f6f8 0, transparent 30%),
-    linear-gradient(135deg, #f7f0e6 0%, #f3e8da 60%, #efe3d2 100%);
+    radial-gradient(circle at 50% -8%, rgba(255, 250, 239, 0.96) 0, transparent 32%),
+    radial-gradient(circle at 14% 12%, rgba(244, 221, 178, 0.6) 0, transparent 24%),
+    radial-gradient(circle at 86% 18%, rgba(237, 226, 201, 0.46) 0, transparent 26%),
+    linear-gradient(180deg, #fbf5e8 0%, #f6eedf 44%, #efe3d2 100%);
 }
 
 .hide-scrollbar {

@@ -11,6 +11,14 @@ import { CutToolPage } from '@/pages/CutToolPage'
 import { RandomConfigPage } from '@/pages/RandomConfigPage'
 
 const isFullMode = import.meta.env.DEV || import.meta.env.VITE_BUILD_TARGET === 'full'
+const defaultPath = isFullMode ? '/pc' : '/m'
+
+function RootRedirect() {
+  let saved: string | null = null
+  try { saved = localStorage.getItem('lastRoute') } catch { /* noop */ }
+  const target = saved && saved.startsWith(isFullMode ? '/' : '/m') ? saved : defaultPath
+  return <Navigate to={target} replace />
+}
 
 const h5Routes = [
   {
@@ -47,15 +55,10 @@ const pcRoutes = isFullMode
     ]
   : [{ path: '/pc/*', element: <Navigate to="/m" replace /> }]
 
-const defaultPath = isFullMode ? '/pc' : '/m'
-let savedRoute: string | null = null
-try { savedRoute = localStorage.getItem('lastRoute') } catch {}
-const initialPath = savedRoute && savedRoute.startsWith(isFullMode ? '/' : '/m') ? savedRoute : defaultPath
-
 export const router = createHashRouter([
   {
     path: '/',
-    element: <Navigate to={initialPath} replace />,
+    element: <RootRedirect />,
   },
   ...h5Routes,
   ...pcRoutes,
