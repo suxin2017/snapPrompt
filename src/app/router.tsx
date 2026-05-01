@@ -11,18 +11,27 @@ import { CutToolPage } from '@/pages/CutToolPage'
 import { RandomConfigPage } from '@/pages/RandomConfigPage'
 
 const isFullMode = import.meta.env.DEV || import.meta.env.VITE_BUILD_TARGET === 'full'
-const defaultPath = isFullMode ? '/pc' : '/m/random-config'
+const H5_DEFAULT = '/m/random-config'
+const PC_DEFAULT = '/pc'
 
+function readLastRoute(): string | null {
+  try { return localStorage.getItem('lastRoute') } catch { return null }
+}
+
+/** Handles start_url='/' (new installs) */
 function RootRedirect() {
-  let saved: string | null = null
-  try { saved = localStorage.getItem('lastRoute') } catch { /* noop */ }
-  const normalizedSaved = saved ?? ''
-
+  const saved = readLastRoute() ?? ''
   const isValidSavedRoute = isFullMode
-    ? normalizedSaved.startsWith('/')
-    : normalizedSaved === '/m/cut-tool' || normalizedSaved === '/m/random-config'
+    ? saved.startsWith('/pc/') || saved.startsWith('/m/')
+    : saved.startsWith('/m/')
+  const target = isValidSavedRoute ? saved : (isFullMode ? PC_DEFAULT : H5_DEFAULT)
+  return <Navigate to={target} replace />
+}
 
-  const target = isValidSavedRoute ? normalizedSaved : defaultPath
+/** Handles start_url='/#/m' (old PWA installs with cached manifest) */
+function H5IndexRedirect() {
+  const saved = readLastRoute() ?? ''
+  const target = saved.startsWith('/m/') ? saved : H5_DEFAULT
   return <Navigate to={target} replace />
 }
 
@@ -37,7 +46,7 @@ const h5Routes = [
       </I18nProvider>
     ),
     children: [
-      { index: true, element: <Navigate to="random-config" replace /> },
+      { index: true, element: <H5IndexRedirect /> },
       { path: 'cut-tool', element: <CutToolPage terminal="h5" /> },
       { path: 'random-config', element: <RandomConfigPage /> },
       { path: 'about', element: <Navigate to="/m/cut-tool" replace /> },
