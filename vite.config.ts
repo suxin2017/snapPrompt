@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'node:path'
 
-const ICON_VERSION = '20260501'
+const ICON_VERSION = '20260501v2'
 
 // https://vite.dev/config/
 export default defineConfig({
