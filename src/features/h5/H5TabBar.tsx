@@ -1,10 +1,10 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Home, Layers, Info } from 'lucide-react'
+import { Home, Layers, Sparkles } from 'lucide-react'
 
 const tabs = [
   { to: '/m', label: '首页', icon: Home },
   { to: '/m/cut-tool', label: '积木', icon: Layers },
-  { to: '/m/about', label: '关于', icon: Info },
+  { to: '/m/random-config', label: '随机', icon: Sparkles },
 ]
 
 export function H5TabBar() {
@@ -26,7 +26,7 @@ export function H5TabBar() {
                 to={to}
                 className={[
                   'flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition-colors',
-                  active ? 'text-[var(--primary)]' : 'text-(--muted-foreground)',
+                  active ? 'text-(--primary)' : 'text-(--muted-foreground)',
                 ].join(' ')}
               >
                 <Icon size={20} strokeWidth={active ? 2.2 : 1.8} />

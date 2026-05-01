@@ -8,6 +8,7 @@ import { FeaturesPage } from '@/pages/FeaturesPage'
 import { AboutPage } from '@/pages/AboutPage'
 import { BlocksPreviewPage } from '@/pages/BlocksPreviewPage'
 import { CutToolPage } from '@/pages/CutToolPage'
+import { RandomConfigPage } from '@/pages/RandomConfigPage'
 
 const isFullMode = import.meta.env.DEV || import.meta.env.VITE_BUILD_TARGET === 'full'
 
@@ -24,6 +25,8 @@ const h5Routes = [
     children: [
       { index: true, element: <Navigate to="cut-tool" replace /> },
       { path: 'cut-tool', element: <CutToolPage terminal="h5" /> },
+      { path: 'random-config', element: <RandomConfigPage /> },
+      { path: 'about', element: <Navigate to="/m/cut-tool" replace /> },
     ],
   },
 ]
@@ -44,10 +47,15 @@ const pcRoutes = isFullMode
     ]
   : [{ path: '/pc/*', element: <Navigate to="/m" replace /> }]
 
+const defaultPath = isFullMode ? '/pc' : '/m'
+let savedRoute: string | null = null
+try { savedRoute = localStorage.getItem('lastRoute') } catch {}
+const initialPath = savedRoute && savedRoute.startsWith(isFullMode ? '/' : '/m') ? savedRoute : defaultPath
+
 export const router = createHashRouter([
   {
     path: '/',
-    element: <Navigate to={isFullMode ? '/pc' : '/m'} replace />,
+    element: <Navigate to={initialPath} replace />,
   },
   ...h5Routes,
   ...pcRoutes,

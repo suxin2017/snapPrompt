@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Copy, Layers, Sparkles, X } from 'lucide-react'
+import { Copy, Layers, Menu, Sparkles, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 
 import { Button } from '@/components/ui/button'
@@ -31,6 +31,7 @@ export function H5BottomBar() {
 
   const [showRecipeSheet, setShowRecipeSheet] = useState(false)
   const [showPromptSheet, setShowPromptSheet] = useState(false)
+  const [showNavSheet, setShowNavSheet] = useState(false)
   const [copied, setCopied] = useState(false)
   const [flashRecipeKey, setFlashRecipeKey] = useState<string | null>(null)
   const prevRecipeKeysRef = useRef<string[]>([])
@@ -76,17 +77,25 @@ export function H5BottomBar() {
     setShowPromptSheet(true)
   }
 
+  function handleNavigateTo(path: '/m/cut-tool' | '/m/random-config') {
+    setShowNavSheet(false)
+    void navigate(path)
+  }
+
   return (
     <>
       <div className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-6xl px-4 pb-2">
         <div className="rounded-2xl border border-(--border) bg-(--card)/95 p-3 shadow-lg md:backdrop-blur">
           <div className="flex items-center gap-3">
+            <Button size="sm" variant="secondary" onClick={() => setShowNavSheet(true)} className="px-2" aria-label={t('openMenu')}>
+              <Menu size={14} />
+            </Button>
             <button
               type="button"
               onClick={() => setShowRecipeSheet(true)}
               className="flex min-w-0 flex-1 items-center gap-2 text-left"
             >
-              <Layers size={16} className="shrink-0 text-[var(--primary)]" />
+              <Layers size={16} className="shrink-0 text-(--primary)" />
               <div className="min-w-0">
                 <span className="text-sm font-medium">
                   {t('currentRecipe')}{' '}
@@ -116,6 +125,51 @@ export function H5BottomBar() {
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showNavSheet ? (
+          <motion.div
+            className="fixed inset-0 z-30 bg-black/30"
+            onClick={() => setShowNavSheet(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+          >
+            <motion.div
+              className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-(--card) p-4"
+              onClick={(event) => event.stopPropagation()}
+              initial={{ y: 36, opacity: 0.6 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 26, opacity: 0.5 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-lg font-semibold">{t('randomConfig')}</h3>
+                <button type="button" onClick={() => setShowNavSheet(false)}>
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="space-y-2 pb-4">
+                <button
+                  type="button"
+                  onClick={() => handleNavigateTo('/m/cut-tool')}
+                  className="flex w-full items-center rounded-xl border border-(--border) bg-(--background) px-3 py-2.5 text-left text-sm font-medium"
+                >
+                  {t('navBlocks')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleNavigateTo('/m/random-config')}
+                  className="flex w-full items-center rounded-xl border border-(--border) bg-(--background) px-3 py-2.5 text-left text-sm font-medium"
+                >
+                  {t('navRandom')}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showRecipeSheet ? (

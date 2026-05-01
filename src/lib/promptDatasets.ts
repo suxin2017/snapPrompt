@@ -60,6 +60,11 @@ export type PromptAssetItem = DatasetPayloadItem & {
   datasetId: string
 }
 
+export type RandomTopCategoryPick = {
+  topCategory: string
+  asset: PromptAssetItem
+}
+
 const MAX_CACHE_SIZE = 8
 const manifestUrl = `${import.meta.env.BASE_URL}datasets/manifest.json`
 const datasetCache = new Map<string, PromptAssetItem[]>()
@@ -317,4 +322,37 @@ export async function loadCategoryAssets(category: CategoryManifestItem) {
   } finally {
     pendingCategoryLoads.delete(cacheKey)
   }
+}
+
+export async function pickRandomAssetsByTopCategory(categories: CategoryManifestItem[]) {
+  const grouped = new Map<string, CategoryManifestItem[]>()
+
+  for (const category of categories) {
+    const bucket = grouped.get(category.topCategory)
+    if (bucket) {
+      bucket.push(category)
+      continue
+    }
+
+    grouped.set(category.topCategory, [category])
+  }
+
+  const picks = await Promise.all(
+    [...grouped.entries()].map(async ([topCategory, scopedCategories]) => {
+      try {
+        const groupedAssets = await Promise.all(scopedCategories.map((item) => loadCategoryAssets(item)))
+        const pool = groupedAssets.flat()
+        if (!pool.length) {
+          return null
+        }
+
+        const randomIndex = Math.floor(Math.random() * pool.length)
+        return { topCategory, asset: pool[randomIndex] }
+      } catch {
+        return null
+      }
+    }),
+  )
+
+  return picks.filter((item): item is RandomTopCategoryPick => item !== null)
 }

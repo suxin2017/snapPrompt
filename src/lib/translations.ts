@@ -41,5 +41,17 @@ export const translations = {
 
     // No Data
     noData: '当前分类暂无素材',
+
+    // Random Config Page
+    randomConfig: '随机配置',
+    openMenu: '打开菜单',
+    randomHint: '点击中间按钮，按每个一级分类随机抽取一个积木',
+    startRandom: '随机配置',
+    randoming: '随机中...',
+    randomResult: '当前随机积木',
+    rerandom: '重新随机',
+    noRandomResult: '暂无可随机素材，请检查数据是否已准备完成',
+    navBlocks: '积木',
+    navRandom: '随机配置',
   },
 }

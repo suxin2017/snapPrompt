@@ -95,7 +95,7 @@ function VirtualAssetGrid({
   return (
     <div
       ref={parentRef}
-      className="overflow-y-auto overscroll-contain px-2 pt-2"
+      className="overflow-y-auto overscroll-contain px-2 pt-2 pb-[calc(70px+env(safe-area-inset-bottom,0px))]"
       style={{ height: '100%' }}
     >
       <div style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>
@@ -123,7 +123,7 @@ function VirtualAssetGrid({
                       onPointerLeave={onPressLeave}
                       onPointerCancel={onPressLeave}
                       onContextMenu={(e) => e.preventDefault()}
-                      className="w-full overflow-hidden rounded-xl select-none touch-manipulation focus:outline-none"
+                      className="w-full overflow-hidden rounded-xl select-none touch-manipulation focus:outline-none focus:ring-2 focus:ring-(--primary) focus:ring-offset-2"
                       aria-label={`${asset.title_cn}，短按添加，长按查看详情`}
                     >
                       <AssetImage src={asset.imageUrl} alt={asset.title_cn} />
