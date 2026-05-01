@@ -324,7 +324,10 @@ export async function loadCategoryAssets(category: CategoryManifestItem) {
   }
 }
 
-export async function pickRandomAssetsByTopCategory(categories: CategoryManifestItem[]) {
+export async function pickRandomAssetsByTopCategory(
+  categories: CategoryManifestItem[],
+  excludedUuids?: ReadonlySet<string>,
+) {
   const grouped = new Map<string, CategoryManifestItem[]>()
 
   for (const category of categories) {
@@ -341,7 +344,10 @@ export async function pickRandomAssetsByTopCategory(categories: CategoryManifest
     [...grouped.entries()].map(async ([topCategory, scopedCategories]) => {
       try {
         const groupedAssets = await Promise.all(scopedCategories.map((item) => loadCategoryAssets(item)))
-        const pool = groupedAssets.flat()
+        const basePool = groupedAssets.flat()
+        const pool = excludedUuids?.size
+          ? basePool.filter((asset) => !excludedUuids.has(asset.uuid))
+          : basePool
         if (!pool.length) {
           return null
         }

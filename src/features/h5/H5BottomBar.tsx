@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Copy, Layers, Menu, Sparkles, X } from 'lucide-react'
+import { Ban, Copy, Layers, Menu, Sparkles, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 
 import { Button } from '@/components/ui/button'
@@ -25,7 +25,14 @@ function buildPrompt(subject: string, items: { prompt_en: string; title_cn: stri
 }
 
 export function H5BottomBar() {
-  const { subject, recipeItems, removeRecipeItem, randomPrompt, requestRandomConfig } = useH5Recipe()
+  const {
+    subject,
+    recipeItems,
+    removeRecipeItem,
+    randomPrompt,
+    requestRandomConfig,
+    requestDislikedSheet,
+  } = useH5Recipe()
   const navigate = useNavigate()
   const location = useLocation()
   const { t } = useI18n()
@@ -109,9 +116,10 @@ export function H5BottomBar() {
             </Button>
             {isRandomPage ? (
               <>
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <Sparkles size={16} className="shrink-0 text-(--primary)" />
-                  <span className="truncate text-sm font-medium text-(--muted-foreground)">{t('randomConfig')}</span>
+                <div className="flex flex-1">
+                  <Button size="sm" variant="secondary" onClick={requestDislikedSheet} className="px-2" aria-label={t('manageDisliked')}>
+                    <Ban size={14} />
+                  </Button>
                 </div>
                 <Button size="sm" variant="secondary" onClick={requestRandomConfig} className="gap-1.5 shrink-0">
                   <Sparkles size={14} />
@@ -152,10 +160,12 @@ export function H5BottomBar() {
                 <Button size="sm" variant="secondary" onClick={() => setShowRecipeSheet(true)} disabled={!recipeItems.length}>
                   {t('view')}
                 </Button>
-                <Button size="sm" onClick={handleGenerateClick} className="gap-1.5">
-                  <Sparkles size={14} />
-                  {recipeItems.length ? t('generate') : t('selectBlocksBtn')}
-                </Button>
+                {recipeItems.length ? (
+                  <Button size="sm" onClick={handleGenerateClick} className="gap-1.5">
+                    <Sparkles size={14} />
+                    {t('generate')}
+                  </Button>
+                ) : null}
               </>
             )}
           </div>

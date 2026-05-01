@@ -273,7 +273,7 @@ export default defineConfig({
         background_color: '#f4efe7',
         display: 'standalone',
         scope: '/',
-        start_url: '/#/m',
+        start_url: '/',
         icons: [
           {
             src: `/icon-192.png?v=${ICON_VERSION}`,
