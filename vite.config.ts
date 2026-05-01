@@ -4,6 +4,8 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'node:path'
 
+const ICON_VERSION = '20260501'
+
 // https://vite.dev/config/
 export default defineConfig({
   base: '/',
@@ -25,19 +27,19 @@ export default defineConfig({
         start_url: '/#/m',
         icons: [
           {
-            src: '/icon-192.png',
+            src: `/icon-192.png?v=${ICON_VERSION}`,
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any',
           },
           {
-            src: '/icon-512.png',
+            src: `/icon-512.png?v=${ICON_VERSION}`,
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any',
           },
           {
-            src: '/icon-512.png',
+            src: `/icon-512.png?v=${ICON_VERSION}`,
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',
