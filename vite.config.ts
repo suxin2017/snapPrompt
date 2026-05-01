@@ -13,7 +13,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      includeAssets: ['favicon.svg'],
+      includeAssets: ['favicon.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'SnapPrompt',
         short_name: 'SnapPrompt',
@@ -24,13 +24,6 @@ export default defineConfig({
         scope: '/',
         start_url: '/#/m',
         icons: [
-          {
-            src: '/favicon.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'any',
-          },
-        ],
           {
             src: '/icon-192.png',
             sizes: '192x192',
@@ -49,6 +42,13 @@ export default defineConfig({
             type: 'image/png',
             purpose: 'maskable',
           },
+        ],
+      },
+      workbox: {
+        cleanupOutdatedCaches: true,
+        navigateFallback: '/index.html',
+        runtimeCaching: [
+          {
             urlPattern: ({ request, url }) =>
               request.method === 'GET' && url.pathname === '/datasets/manifest.json',
             handler: 'StaleWhileRevalidate',
