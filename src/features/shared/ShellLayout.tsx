@@ -16,7 +16,7 @@ export function ShellLayout({ basePath }: ShellLayoutProps) {
   useThemeColor(pathname)
 
   useEffect(() => {
-    if (pathname && pathname !== '/') {
+    if (pathname && pathname !== '/' && pathname !== '/m' && pathname !== '/pc') {
       try { localStorage.setItem('lastRoute', pathname) } catch { /* noop */ }
     }
   }, [pathname])

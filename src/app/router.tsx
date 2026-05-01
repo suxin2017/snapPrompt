@@ -11,12 +11,18 @@ import { CutToolPage } from '@/pages/CutToolPage'
 import { RandomConfigPage } from '@/pages/RandomConfigPage'
 
 const isFullMode = import.meta.env.DEV || import.meta.env.VITE_BUILD_TARGET === 'full'
-const defaultPath = isFullMode ? '/pc' : '/m'
+const defaultPath = isFullMode ? '/pc' : '/m/random-config'
 
 function RootRedirect() {
   let saved: string | null = null
   try { saved = localStorage.getItem('lastRoute') } catch { /* noop */ }
-  const target = saved && saved.startsWith(isFullMode ? '/' : '/m') ? saved : defaultPath
+  const normalizedSaved = saved ?? ''
+
+  const isValidSavedRoute = isFullMode
+    ? normalizedSaved.startsWith('/')
+    : normalizedSaved === '/m/cut-tool' || normalizedSaved === '/m/random-config'
+
+  const target = isValidSavedRoute ? normalizedSaved : defaultPath
   return <Navigate to={target} replace />
 }
 
@@ -31,7 +37,7 @@ const h5Routes = [
       </I18nProvider>
     ),
     children: [
-      { index: true, element: <Navigate to="cut-tool" replace /> },
+      { index: true, element: <Navigate to="random-config" replace /> },
       { path: 'cut-tool', element: <CutToolPage terminal="h5" /> },
       { path: 'random-config', element: <RandomConfigPage /> },
       { path: 'about', element: <Navigate to="/m/cut-tool" replace /> },
