@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, rm, stat, writeFile, access } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createHash } from 'node:crypto'
@@ -208,16 +208,67 @@ async function cleanOutputDir(outputRoot) {
   await writeFile(path.join(outputRoot, '.gitignore'), '# Generated output\n*\n!.gitignore\n', 'utf8')
 }
 
+async function fileExists(filePath) {
+  try {
+    await access(filePath)
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function loadExistingManifest(outputRoot) {
+  const manifestPath = path.join(outputRoot, MANIFEST_NAME)
+  try {
+    const text = await readFile(manifestPath, 'utf8')
+    const parsed = JSON.parse(text)
+    const map = new Map()
+    for (const item of parsed.items ?? []) {
+      map.set(item.id, item)
+    }
+    return map
+  } catch {
+    return new Map()
+  }
+}
+
 async function main() {
   await ensureDirectory(OUTPUT_ROOT)
+  await ensureDirectory(DATA_ROOT)
+
+  // Ensure .gitignore exists even when output dir already existed
+  const gitignorePath = path.join(OUTPUT_ROOT, '.gitignore')
+  if (!(await fileExists(gitignorePath))) {
+    await writeFile(gitignorePath, '# Generated output\n*\n!.gitignore\n', 'utf8')
+  }
 
   const allFiles = await walk(SOURCE_ROOT)
   const zipFiles = allFiles.filter((filePath) => filePath.toLowerCase().endsWith('.zip'))
 
-  await cleanOutputDir(OUTPUT_ROOT)
+  // Load existing manifest to detect unchanged / orphaned datasets
+  const existingManifest = await loadExistingManifest(OUTPUT_ROOT)
+
+  // Build set of datasetIds that should exist after this run
+  const expectedIds = new Set()
+  for (const zipFile of zipFiles) {
+    const rel = normalizePath(path.relative(SOURCE_ROOT, zipFile))
+    expectedIds.add(buildDatasetId(rel))
+  }
+
+  // Remove orphaned data files and image dirs
+  for (const [id] of existingManifest) {
+    if (!expectedIds.has(id)) {
+      const dataFile = path.join(OUTPUT_ROOT, 'data', `${id}.json`)
+      const imagesDir = path.join(OUTPUT_ROOT, 'images', id)
+      await rm(dataFile, { force: true })
+      await rm(imagesDir, { recursive: true, force: true })
+    }
+  }
 
   const generated = []
   const categoryBuckets = new Map()
+  let skipped = 0
+  let processed = 0
 
   function pushToCategoryBucket(topCategory, subCategory, item) {
     const key = `${topCategory}::${subCategory ?? ''}`
@@ -240,17 +291,67 @@ async function main() {
   }
 
   for (const zipFile of zipFiles) {
-    const parsed = await unzipDataset(zipFile, SOURCE_ROOT)
-    generated.push(parsed.manifest)
+    const rel = path.relative(SOURCE_ROOT, zipFile)
+    const normalizedRel = normalizePath(rel)
+    const datasetId = buildDatasetId(normalizedRel)
+    const zipStat = await stat(zipFile)
+    const zipUpdatedAt = new Date(zipStat.mtimeMs).toISOString()
+    const dataFilePath = path.join(OUTPUT_ROOT, 'data', `${datasetId}.json`)
 
-    const categoryParts = parsed.manifest.category ? parsed.manifest.category.split('/') : ['未分类']
-    const topCategory = categoryParts[0] || '未分类'
-    const subCategory = categoryParts.slice(1).join('/') || null
+    const existing = existingManifest.get(datasetId)
+    const isUpToDate =
+      existing &&
+      existing.updatedAt === zipUpdatedAt &&
+      (await fileExists(dataFilePath))
 
-    for (const item of parsed.aggregateItems) {
-      pushToCategoryBucket(topCategory, null, item)
-      if (subCategory) {
-        pushToCategoryBucket(topCategory, subCategory, item)
+    if (isUpToDate) {
+      // Reuse stored manifest entry; read aggregateItems from existing data file
+      generated.push(existing)
+      skipped++
+
+      try {
+        const dataText = await readFile(dataFilePath, 'utf8')
+        const data = JSON.parse(dataText)
+        const categoryRel = path.dirname(rel)
+        const category = normalizePath(categoryRel) === '.' ? '' : normalizePath(categoryRel)
+        const datasetName = path.basename(rel, path.extname(rel))
+
+        for (const item of data.items ?? []) {
+          const aggItem = { ...item, datasetId, datasetName, category }
+          const categoryParts = category ? category.split('/') : ['未分类']
+          const topCategory = categoryParts[0] || '未分类'
+          const subCategory = categoryParts.slice(1).join('/') || null
+          pushToCategoryBucket(topCategory, null, aggItem)
+          if (subCategory) pushToCategoryBucket(topCategory, subCategory, aggItem)
+        }
+      } catch {
+        // Data file unreadable — fall through to re-process
+        skipped--
+        const parsed = await unzipDataset(zipFile, SOURCE_ROOT)
+        generated.push(parsed.manifest)
+        processed++
+        const categoryParts = parsed.manifest.category ? parsed.manifest.category.split('/') : ['未分类']
+        const topCategory = categoryParts[0] || '未分类'
+        const subCategory = categoryParts.slice(1).join('/') || null
+        for (const item of parsed.aggregateItems) {
+          pushToCategoryBucket(topCategory, null, item)
+          if (subCategory) pushToCategoryBucket(topCategory, subCategory, item)
+        }
+      }
+    } else {
+      const parsed = await unzipDataset(zipFile, SOURCE_ROOT)
+      generated.push(parsed.manifest)
+      processed++
+
+      const categoryParts = parsed.manifest.category ? parsed.manifest.category.split('/') : ['未分类']
+      const topCategory = categoryParts[0] || '未分类'
+      const subCategory = categoryParts.slice(1).join('/') || null
+
+      for (const item of parsed.aggregateItems) {
+        pushToCategoryBucket(topCategory, null, item)
+        if (subCategory) {
+          pushToCategoryBucket(topCategory, subCategory, item)
+        }
       }
     }
   }
@@ -289,8 +390,12 @@ async function main() {
 
   const manifestPath = await writeManifest(OUTPUT_ROOT, generated, categoryEntries)
 
+  const orphaned = [...existingManifest.keys()].filter((id) => !expectedIds.has(id)).length
+  const parts = [`${processed} new/updated`]
+  if (skipped > 0) parts.push(`${skipped} skipped (unchanged)`)
+  if (orphaned > 0) parts.push(`${orphaned} removed`)
   process.stdout.write(
-    `Prepared ${generated.length} dataset(s).\nOutput: ${path.relative(projectRoot, OUTPUT_ROOT)}\nManifest: ${path.relative(projectRoot, manifestPath)}\n`,
+    `Prepared ${generated.length} dataset(s): ${parts.join(', ')}.\nOutput: ${path.relative(projectRoot, OUTPUT_ROOT)}\nManifest: ${path.relative(projectRoot, manifestPath)}\n`,
   )
 }
 

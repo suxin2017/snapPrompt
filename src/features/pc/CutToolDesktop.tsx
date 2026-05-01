@@ -1,13 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import JSZip from 'jszip'
-import { X } from 'lucide-react'
+import { AlertTriangle, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 
 type IconPrompt = {
   title_cn?: string
   prompt_en?: string
+}
+
+type ExistingItem = {
+  datasetId: string
+  datasetName: string
+  title_cn: string
+  prompt_en: string
+  imagePath: string
 }
 
 type RawLayoutPayload = {
@@ -261,24 +269,137 @@ function SlicePreviewCanvas({
   )
 }
 
+function DuplicateCompareModal({
+  slice,
+  imageUrl,
+  existing,
+  onClose,
+}: {
+  slice: SliceRect
+  imageUrl: string
+  existing: ExistingItem[]
+  onClose: () => void
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="relative max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-start justify-between gap-6">
+          <div>
+            <p className="flex items-center gap-1.5 text-base font-semibold text-orange-700">
+              <AlertTriangle size={16} />
+              重复标题：{slice.title}
+            </p>
+            <p className="mt-0.5 text-xs text-(--muted-foreground)">
+              左侧为当前切片，右侧为素材库中已有的同名条目
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-full p-1 text-(--muted-foreground) hover:bg-(--muted) hover:text-(--foreground)"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="grid gap-4" style={{ gridTemplateColumns: `1fr ${existing.length > 1 ? 'repeat(auto-fill, minmax(180px, 1fr))' : '1fr'}` }}>
+          {/* Current slice */}
+          <div className="space-y-2 rounded-xl border-2 border-orange-300 bg-orange-50 p-3">
+            <p className="text-xs font-semibold text-orange-800">当前切片（未导出）</p>
+            <SlicePreviewCanvas imageUrl={imageUrl} slice={slice} />
+            <p className="text-xs text-(--muted-foreground)">{slice.prompt || '—'}</p>
+          </div>
+
+          {/* Existing items */}
+          {existing.map((item, i) => (
+            <div key={i} className="space-y-2 rounded-xl border border-(--border) bg-(--muted)/20 p-3">
+              <p className="truncate text-xs font-semibold text-(--foreground)">已有：{item.datasetName}</p>
+              {item.imagePath ? (
+                <img
+                  src={`/datasets/${item.imagePath}`}
+                  alt={item.title_cn}
+                  className="block max-h-64 w-full rounded-lg object-contain bg-white"
+                />
+              ) : (
+                <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-(--border) text-xs text-(--muted-foreground)">
+                  无图片
+                </div>
+              )}
+              <p className="text-xs text-(--muted-foreground)">{item.prompt_en || '—'}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function CutToolDesktop() {
+  const datasetPrepareAvailable = import.meta.env.DEV
   const [jsonText, setJsonText] = useState(SAMPLE_JSON)
   const [manualOverrides, setManualOverrides] = useState<ManualOverrides>({})
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [imageName, setImageName] = useState('uploaded-image')
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 })
   const [exporting, setExporting] = useState(false)
+  const [preparingDatasets, setPreparingDatasets] = useState(false)
+  const [prepareDatasetsStatus, setPrepareDatasetsStatus] = useState<string | null>(null)
+  const [prepareDatasetsLog, setPrepareDatasetsLog] = useState<string>('')
+  const [availableCategories, setAvailableCategories] = useState<{
+    topCategories: string[]
+    subCategories: Record<string, string[]>
+  }>({ topCategories: [], subCategories: {} })
+  const [importTopCat, setImportTopCat] = useState('')
+  const [importSubCat, setImportSubCat] = useState('')
+  const [importFilename, setImportFilename] = useState('')
+  const [importStatus, setImportStatus] = useState<string | null>(null)
+  const [importRunPrepare, setImportRunPrepare] = useState(true)
   const [previewSlice, setPreviewSlice] = useState<SliceRect | null>(null)
   const [excludedSliceIndices, setExcludedSliceIndices] = useState<Set<number>>(new Set())
+  const [titleIndex, setTitleIndex] = useState<Map<string, ExistingItem[]>>(new Map())
+  const [duplicatePreview, setDuplicatePreview] = useState<{ slice: SliceRect; existing: ExistingItem[] } | null>(null)
 
   useEffect(() => {
-    if (!previewSlice) return
+    if (!datasetPrepareAvailable) return
+    fetch('/__dev/list-categories')
+      .then((r) => r.json())
+      .then((data: { topCategories: string[]; subCategories: Record<string, string[]> }) => {
+        setAvailableCategories(data)
+      })
+      .catch(() => {})
+  }, [datasetPrepareAvailable])
+
+  const refreshTitleIndex = () => {
+    if (!datasetPrepareAvailable) return
+    fetch('/__dev/title-index')
+      .then((r) => r.json())
+      .then((data: { titleIndex: Record<string, ExistingItem[]> }) => {
+        setTitleIndex(new Map(Object.entries(data.titleIndex)))
+      })
+      .catch(() => {})
+  }
+
+  useEffect(() => {
+    refreshTitleIndex()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [datasetPrepareAvailable])
+
+  useEffect(() => {
+    if (!previewSlice && !duplicatePreview) return
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setPreviewSlice(null)
+      if (event.key === 'Escape') {
+        setPreviewSlice(null)
+        setDuplicatePreview(null)
+      }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [previewSlice])
+  }, [previewSlice, duplicatePreview])
 
   useEffect(() => {
     return () => {
@@ -355,8 +476,20 @@ export function CutToolDesktop() {
     return result
   }, [effectiveLayout, imageSize.height, imageSize.width, parsedResult.payload])
 
-  const warnings = useMemo(() => {
-    const all = [...parsedResult.warnings]
+  const duplicateMap = useMemo(() => {
+    const map = new Map<number, ExistingItem[]>()
+    if (!datasetPrepareAvailable || titleIndex.size === 0) return map
+    for (const slice of slices) {
+      const key = slice.title.trim().toLowerCase()
+      const existing = titleIndex.get(key)
+      if (existing && existing.length > 0) {
+        map.set(slice.index, existing)
+      }
+    }
+    return map
+  }, [datasetPrepareAvailable, slices, titleIndex])
+
+  const warnings = useMemo(() => {    const all = [...parsedResult.warnings]
     if (!effectiveLayout || !parsedResult.payload) {
       return all
     }
@@ -509,31 +642,128 @@ export function CutToolDesktop() {
       const archive = await zip.generateAsync({ type: 'blob' })
       const defaultFilename = `${sanitizeFilename(imageType)}.zip`
 
-      if ('showSaveFilePicker' in window) {
-        try {
-          const fileHandle = await (window as typeof window & {
-            showSaveFilePicker: (opts: unknown) => Promise<FileSystemFileHandle>
-          }).showSaveFilePicker({
-            suggestedName: defaultFilename,
-            types: [{ description: 'ZIP 文件', accept: { 'application/zip': ['.zip'] } }],
-          })
-          const writable = await fileHandle.createWritable()
-          await writable.write(archive)
-          await writable.close()
-        } catch (err) {
-          // User cancelled the picker — do nothing
-          if (err instanceof Error && err.name !== 'AbortError') throw err
+      if (datasetPrepareAvailable) {
+        setImportFilename(defaultFilename)
+        setImportStatus(null)
+      }
+
+      // Only show native save dialog when not auto-importing to src/assets
+      if (!(datasetPrepareAvailable && importTopCat.trim())) {
+        if ('showSaveFilePicker' in window) {
+          try {
+            const fileHandle = await (window as typeof window & {
+              showSaveFilePicker: (opts: unknown) => Promise<FileSystemFileHandle>
+            }).showSaveFilePicker({
+              suggestedName: defaultFilename,
+              types: [{ description: 'ZIP 文件', accept: { 'application/zip': ['.zip'] } }],
+            })
+            const writable = await fileHandle.createWritable()
+            await writable.write(archive)
+            await writable.close()
+          } catch (err) {
+            // User cancelled the picker — do nothing
+            if (err instanceof Error && err.name !== 'AbortError') throw err
+          }
+        } else {
+          const href = URL.createObjectURL(archive)
+          const anchor = document.createElement('a')
+          anchor.href = href
+          anchor.download = defaultFilename
+          anchor.click()
+          URL.revokeObjectURL(href)
         }
-      } else {
-        const href = URL.createObjectURL(archive)
-        const anchor = document.createElement('a')
-        anchor.href = href
-        anchor.download = defaultFilename
-        anchor.click()
-        URL.revokeObjectURL(href)
+      }
+
+      // If dev mode and a top category is configured, auto-import to src/assets
+      if (datasetPrepareAvailable && importTopCat.trim()) {
+        try {
+          const filename = importFilename.trim() || defaultFilename
+          const safeFilename = filename.endsWith('.zip') ? filename : `${filename}.zip`
+          const params = new URLSearchParams({ topCategory: importTopCat.trim(), filename: safeFilename })
+          if (importSubCat.trim()) params.set('subCategory', importSubCat.trim())
+
+          setImportStatus('正在导入到素材库...')
+          const importResponse = await fetch(`/__dev/import-zip?${params.toString()}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/octet-stream' },
+            body: archive,
+          })
+          const importResult = (await importResponse.json()) as { ok: boolean; savedPath?: string; message?: string }
+
+          if (!importResult.ok) {
+            setImportStatus(importResult.message ?? '导入失败。')
+          } else {
+            fetch('/__dev/list-categories')
+              .then((r) => r.json())
+              .then((data: { topCategories: string[]; subCategories: Record<string, string[]> }) => setAvailableCategories(data))
+              .catch(() => {})
+            refreshTitleIndex()
+
+            if (!importRunPrepare) {
+              setImportStatus(`已保存到 ${importResult.savedPath}。`)
+            } else {
+              setImportStatus(`已保存到 ${importResult.savedPath}，正在生成 dataset...`)
+              const prepResponse = await fetch('/__dev/prepare-datasets', { method: 'POST' })
+              const prepResult = (await prepResponse.json()) as {
+                ok: boolean; durationMs?: number; stdout?: string; stderr?: string; message?: string
+              }
+              const secs = prepResult.durationMs ? (prepResult.durationMs / 1000).toFixed(1) : null
+              const errDetail = (prepResult.message ?? [prepResult.stdout?.trim(), prepResult.stderr?.trim()].filter(Boolean).join('\n\n')) || '未知错误'
+              setImportStatus(
+                prepResult.ok
+                  ? (secs ? `已导入，dataset 生成完成（${secs}s）。必要时刷新页面。` : '已导入，dataset 生成完成。')
+                  : `ZIP 已导入，但 dataset 生成失败：${errDetail}。`,
+              )
+            }
+          }
+        } catch (importErr) {
+          setImportStatus(importErr instanceof Error ? `导入失败：${importErr.message}` : '导入失败。')
+        }
       }
     } finally {
       setExporting(false)
+    }
+  }
+
+  const handlePrepareDatasets = async () => {
+    if (!datasetPrepareAvailable || preparingDatasets) {
+      return
+    }
+
+    setPreparingDatasets(true)
+    setPrepareDatasetsStatus('正在生成 dataset...')
+    setPrepareDatasetsLog('')
+
+    try {
+      const response = await fetch('/__dev/prepare-datasets', {
+        method: 'POST',
+      })
+      const result = (await response.json()) as {
+        ok: boolean
+        exitCode: number | null
+        stdout?: string
+        stderr?: string
+        durationMs?: number
+        message?: string
+      }
+
+      const output = [result.stdout?.trim(), result.stderr?.trim()].filter(Boolean).join('\n\n')
+      setPrepareDatasetsLog(output)
+
+      if (!response.ok || !result.ok) {
+        setPrepareDatasetsStatus(result.message ?? `生成失败，退出码 ${result.exitCode ?? 'unknown'}。`)
+        return
+      }
+
+      const durationSeconds = result.durationMs ? (result.durationMs / 1000).toFixed(1) : null
+      setPrepareDatasetsStatus(
+        durationSeconds ? `dataset 生成完成，耗时 ${durationSeconds}s。必要时刷新页面以读取最新清单。` : 'dataset 生成完成。',
+      )
+      refreshTitleIndex()
+    } catch (error) {
+      setPrepareDatasetsStatus(error instanceof Error ? `生成失败：${error.message}` : '生成失败。')
+    } finally {
+      setPreparingDatasets(false)
     }
   }
 
@@ -546,6 +776,90 @@ export function CutToolDesktop() {
         <p className="mt-2 text-sm text-(--muted-foreground)">
           上传原图，粘贴 JSON 布局，系统按 rows/columns 和起点、尺寸、间距自动切片。建议值可手动微调。
         </p>
+        {datasetPrepareAvailable ? (
+          <div className="mt-4 space-y-3">
+            {/* Generate dataset */}
+            <div className="rounded-xl border border-(--border) bg-white/80 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">生成 dataset</p>
+                  <p className="mt-1 text-xs text-(--muted-foreground)">
+                    调用 scripts/prepare-datasets.mjs，把 src/assets 里的 zip 全部解包输出到 public/datasets。
+                  </p>
+                </div>
+                <Button onClick={handlePrepareDatasets} disabled={preparingDatasets}>
+                  {preparingDatasets ? '生成中...' : '一键生成 dataset'}
+                </Button>
+              </div>
+              {prepareDatasetsStatus ? <p className="mt-3 text-sm text-(--foreground)">{prepareDatasetsStatus}</p> : null}
+              {prepareDatasetsLog ? (
+                <pre className="mt-3 max-h-48 overflow-auto rounded-lg bg-(--muted)/50 px-3 py-2 text-xs leading-5 whitespace-pre-wrap">
+                  {prepareDatasetsLog}
+                </pre>
+              ) : null}
+            </div>
+
+            {/* Import ZIP */}
+            <div className="rounded-xl border border-(--border) bg-white/80 p-4">
+              <p className="text-sm font-semibold">导入 ZIP 到素材库</p>
+              <p className="mt-1 text-xs text-(--muted-foreground)">
+                选择 zip 文件，指定分类（顶级必填），写入 src/assets/&lt;顶级&gt;/&lt;子级&gt;/。
+              </p>
+              <datalist id="top-cat-list">
+                {availableCategories.topCategories.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+              <datalist id="sub-cat-list">
+                {(availableCategories.subCategories[importTopCat] ?? []).map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <label className="space-y-1 text-xs">
+                  <span className="text-(--muted-foreground)">顶级分类 *</span>
+                  <input
+                    list="top-cat-list"
+                    value={importTopCat}
+                    onChange={(e) => { setImportTopCat(e.target.value); setImportSubCat('') }}
+                    placeholder="如：上衣"
+                    className="w-full rounded-lg border border-(--border) bg-white px-2 py-1.5 text-sm"
+                  />
+                </label>
+                <label className="space-y-1 text-xs">
+                  <span className="text-(--muted-foreground)">子分类（可留空）</span>
+                  <input
+                    list="sub-cat-list"
+                    value={importSubCat}
+                    onChange={(e) => setImportSubCat(e.target.value)}
+                    placeholder="如：吊带"
+                    className="w-full rounded-lg border border-(--border) bg-white px-2 py-1.5 text-sm"
+                  />
+                </label>
+                <label className="col-span-2 space-y-1 text-xs">
+                  <span className="text-(--muted-foreground)">保存文件名（可选，留空自动取 image_type）</span>
+                  <input
+                    value={importFilename}
+                    onChange={(e) => setImportFilename(e.target.value)}
+                    placeholder="xxx.zip"
+                    className="w-full rounded-lg border border-(--border) bg-white px-2 py-1.5 text-sm"
+                  />
+                </label>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                <label className="flex cursor-pointer items-center gap-2 text-xs text-(--muted-foreground)">
+                  <input
+                    type="checkbox"
+                    checked={importRunPrepare}
+                    onChange={(e) => setImportRunPrepare(e.target.checked)}
+                  />
+                  导入后自动生成 dataset
+                </label>
+              </div>
+              {importStatus ? <p className="mt-3 text-sm text-(--foreground)">{importStatus}</p> : null}
+            </div>
+          </div>
+        ) : null}
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
@@ -624,7 +938,11 @@ export function CutToolDesktop() {
                   反选
                 </Button>
                 <Button onClick={handleExportZip} disabled={!imageUrl || exportableSlices.length === 0 || hasBlockingError || exporting}>
-                  {exporting ? '导出中...' : `导出 ZIP (${exportableSlices.length})`}
+                  {exporting
+                    ? (datasetPrepareAvailable && importTopCat.trim() ? '导出并导入中...' : '导出中...')
+                    : (datasetPrepareAvailable && importTopCat.trim()
+                        ? `导出 + 导入素材库 (${exportableSlices.length})`
+                        : `导出 ZIP (${exportableSlices.length})`)}
                 </Button>
               </div>
             </div>
@@ -685,6 +1003,29 @@ export function CutToolDesktop() {
           </div>
         ) : null}
 
+        {duplicateMap.size > 0 ? (
+          <div className="mb-4 space-y-1 rounded-lg border border-orange-300 bg-orange-50 px-3 py-2 text-xs text-orange-900">
+            <p className="mb-1 font-semibold flex items-center gap-1.5">
+              <AlertTriangle size={13} />
+              发现 {duplicateMap.size} 个切片与素材库中已有条目标题相同（点击对比）：
+            </p>
+            {slices
+              .filter((s) => duplicateMap.has(s.index))
+              .map((s) => {
+                const existing = duplicateMap.get(s.index)!
+                return (
+                  <p
+                    key={s.index}
+                    className="cursor-pointer hover:underline"
+                    onClick={() => setDuplicatePreview({ slice: s, existing })}
+                  >
+                    • #{s.index + 1} <strong>{s.title}</strong> — 已在「{existing.map((e) => e.datasetName).join('、')}」中存在
+                  </p>
+                )
+              })}
+          </div>
+        ) : null}
+
         {slices.length === 0 ? (
           <p className="text-sm text-(--muted-foreground)">暂无切片结果。上传图片并输入有效 JSON 后自动生成。</p>
         ) : (
@@ -692,14 +1033,33 @@ export function CutToolDesktop() {
             {slices.map((item) => (
               <article
                 key={item.index}
-                onClick={() => { if (item.valid) setPreviewSlice(item) }}
-                className={`space-y-2 rounded-xl border border-(--border) bg-white p-3 transition-shadow ${
+                onClick={() => {
+                  if (!item.valid) return
+                  const existing = duplicateMap.get(item.index)
+                  if (existing) {
+                    setDuplicatePreview({ slice: item, existing })
+                  } else {
+                    setPreviewSlice(item)
+                  }
+                }}
+                className={`space-y-2 rounded-xl border bg-white p-3 transition-shadow ${
+                  duplicateMap.has(item.index)
+                    ? 'border-orange-300 ring-1 ring-orange-200'
+                    : 'border-(--border)'
+                } ${
                   item.valid ? 'cursor-pointer hover:shadow-md hover:ring-2 hover:ring-(--primary)/40' : 'opacity-60'
                 }`}
               >
                 <div className="flex items-center justify-between text-xs text-(--muted-foreground)">
                   <span className="truncate font-medium">#{item.index + 1} {item.title}</span>
-                  <span className="ml-1 shrink-0">{item.valid ? `${item.width}×${item.height}` : '无效'}</span>
+                  <div className="ml-1 flex shrink-0 items-center gap-1">
+                    {duplicateMap.has(item.index) ? (
+                      <span title="与素材库已有条目重名，点击对比">
+                        <AlertTriangle size={12} className="text-orange-500" />
+                      </span>
+                    ) : null}
+                    <span>{item.valid ? `${item.width}×${item.height}` : '无效'}</span>
+                  </div>
                 </div>
                 <label
                   className={`flex items-center gap-2 rounded-md px-2 py-1 text-xs ${
@@ -733,6 +1093,15 @@ export function CutToolDesktop() {
           </div>
         )}
       </div>
+
+      {duplicatePreview !== null && imageUrl ? (
+        <DuplicateCompareModal
+          slice={duplicatePreview.slice}
+          imageUrl={imageUrl}
+          existing={duplicatePreview.existing}
+          onClose={() => setDuplicatePreview(null)}
+        />
+      ) : null}
 
       {previewSlice !== null && imageUrl ? (
         <div
