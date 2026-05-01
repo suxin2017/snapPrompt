@@ -31,12 +31,24 @@ export default defineConfig({
             purpose: 'any',
           },
         ],
-      },
-      workbox: {
-        cleanupOutdatedCaches: true,
-        navigateFallback: '/index.html',
-        runtimeCaching: [
           {
+            src: '/icon-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
             urlPattern: ({ request, url }) =>
               request.method === 'GET' && url.pathname === '/datasets/manifest.json',
             handler: 'StaleWhileRevalidate',
