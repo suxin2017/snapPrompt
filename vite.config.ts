@@ -20,7 +20,7 @@ export default defineConfig({
         name: 'SnapPrompt',
         short_name: 'SnapPrompt',
         description: '离线可用的提示词素材库',
-        theme_color: '#005f73',
+        theme_color: '#f4efe7',
         background_color: '#f4efe7',
         display: 'standalone',
         scope: '/',
